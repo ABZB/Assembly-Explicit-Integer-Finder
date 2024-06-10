@@ -63,6 +63,8 @@ def main():
 				if(check_one_byte(search_array[offset + 0], search_array[offset + 2], search_array[offset + 3], low_byte)):
 					two_subtractions_array.append(offset)
 				#check to see if this matches as a regular little-endian integer
+				elif(search_array[offset] == low_byte):
+					explicit_address_array.append(offset)
 				elif(search_array[offset] == low_byte and search_array[offset + 1] == high_byte):
 					explicit_address_array.append(offset)
 			except:
@@ -83,7 +85,7 @@ def main():
 			try:
 				if(check_two_bytes(search_array[offset + 0], search_array[offset + 2], search_array[offset + 3], search_array[offset + 4], search_array[offset + 6], search_array[offset + 7], high_byte, low_byte)):
 					two_subtractions_array.append(offset)
-				elif(search_array[offset] == low_byte):
+				elif(search_array[offset] == low_byte and search_array[offset + 1] == high_byte):
 					explicit_address_array.append(offset)
 			except:
 				print('Error encountered at ', offset)
