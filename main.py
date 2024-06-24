@@ -68,7 +68,7 @@ def main():
 				elif(search_array[offset] == low_byte and search_array[offset + 1] == high_byte):
 					explicit_address_array.append(offset)
 			except:
-				print('Error encountered at ', offset)
+				print('Error encountered at ', offset, ' 1-byte mode')
 				break
 
 	
@@ -88,8 +88,8 @@ def main():
 				elif(search_array[offset] == low_byte and search_array[offset + 1] == high_byte):
 					explicit_address_array.append(offset)
 			except:
-				print('Error encountered at ', offset)
-				break
+				print('Error encountered at ', offset, ' 2-byte mode')
+				return
 	
 
 
