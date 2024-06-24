@@ -104,15 +104,17 @@ def main():
 	
 
 	with open(output_file_path, "w") as f:
-		f.write('The following are the hexadecimal addresses where the value ' + output_value_display + ' was found:\n')
+		
+		#explicitly written and loaded by functions
+		f.write('The following are the hexadecimal addresses where the value ' + output_value_display + ' was found (written explicitly in little-Endian, presumably loaded by functions pointing to that address):\n')
 		
 		for address in explicit_address_array:
 			f.write(str(hex(address)) + '\n')
 		
 		if(high_byte == 0):
-			f.write('\nThe following are the hexadecimal addresses where the value ', output_value_display, ' was found being checked for equality (low XX 5X E3):\n')
+			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (low XX 5X E3):\n')
 		else:
-			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (high XX 4X E2 low):\n')
+			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (high XX 4X E2 low XX 5X):\n')
 		
 		for address in two_subtractions_array:
 			f.write(str(hex(address)) + '\n')
