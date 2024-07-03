@@ -22,17 +22,25 @@ def check_two_byte_cmp(offset_0, offset_1, offset_2, offset_3, zero_bytes_at_end
 def print_percent_done(file_length, position):
 	print(position/file_length)
 
-def main():
+def search_binary_file_two_bytes(target_value = -1, source_file = '', output_file_path = '', mode = -1):
 	search_array = []
 	
-	#value we are searching for
-	target_value = input('What is the base-10 value you are searching for? ')
+	if(target_value == -1):
+		#value we are searching for
+		target_value = input('What is the base-10 value you are searching for? ')
+	
+		#file we are looking in
+		source_file = askopenfilename(title = 'Select binary file to search in')
 	
 	try:
 		target_value = int(target_value)
 	except:
 		print(target_value, 'is not an integer, it is ', type(target_value))
 		return
+	
+	
+	explicit_address_array = []
+	two_subtractions_array = []
 	
 	#divide into the low and high bytes
 	low_byte = target_value % 256
@@ -44,8 +52,6 @@ def main():
 	zero_bytes_at_end = 0
 	cmp_explicit_array = []
 	
-	explicit_address_array = []
-	two_subtractions_array = []
 
     #if we are dealing with a two-byte target that only has two non-zero bytes, and they are contiguous (e.g. 0x0BC0 or 0xAB00) we can also see a single-line cmp function that uses a bitshift
 	if(high_byte != 0):
@@ -62,8 +68,6 @@ def main():
 			#we have 0x0B CO, need 0xBC, so bitshift the high byte up by 4 (since top 4 bits are empty), add that to low byte shifted down by 4 (since bottom 4 bits are empty)
 			bitshifted_value = (high_byte << 4) + (low_byte >> 4)
 
-	#file we are looking in
-	source_file = askopenfilename(title = 'Select binary file to search in')
 	with open(source_file, "r+b") as f:
 		f.seek(0, os.SEEK_END)
 		file_end = f.tell()
@@ -125,42 +129,49 @@ def main():
 				print('Error encountered at ', offset, ' 2-byte mode')
 				return
 	
-
-
-	output_file_path = asksaveasfilename(title = 'Select text file to save output as', defaultextension = '.txt')
+	if(not mode in {1, 2}):
+		if(output_file_path == ''):
+			output_file_path = asksaveasfilename(title = 'Select text file to save output as', defaultextension = '.txt')
 	
-	output_value_display = ''
+		output_value_display = ''
 	
-	if(high_byte == 0):
-		output_value_display = hex(low_byte)
-	else:
-		output_value_display = hex(low_byte) + ' ' + hex(high_byte)
-	
-
-	with open(output_file_path, "w") as f:
-		
-		#explicitly written and loaded by functions
-		f.write('The following are the hexadecimal addresses where the value ' + output_value_display + ' was found (written explicitly in little-Endian, presumably loaded by functions pointing to that address):\n')
-		
-		for address in explicit_address_array:
-			f.write(str(hex(address)) + '\n')
-		
-		#bitshifted cmp function
-		if(zero_bytes_at_end == 1):
-			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (<low nibble of high + high nibble of low> 0E 5X E3):\n')
-		elif(zero_bytes_at_end == 2):
-			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (high 0C 5X E3):\n')
-        
-		for address in cmp_explicit_array:
-			f.write(str(hex(address)) + '\n')
-			
-		#regular cmp function (one byte) or sub followed by subs (two bytes)
 		if(high_byte == 0):
-			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (low XX 5X E3):\n')
+			output_value_display = hex(low_byte)
 		else:
-			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (high XX 4X E2 low XX 5X):\n')
+			output_value_display = hex(low_byte) + ' ' + hex(high_byte)
+	
+
+		with open(output_file_path, "w") as f:
 		
-		for address in two_subtractions_array:
-			f.write(str(hex(address)) + '\n')
+			#explicitly written and loaded by functions
+			f.write('The following are the hexadecimal addresses where the value ' + output_value_display + ' was found (written explicitly in little-Endian, presumably loaded by functions pointing to that address):\n')
 		
-main()
+			for address in explicit_address_array:
+				f.write(str(hex(address)) + '\n')
+		
+			#bitshifted cmp function
+			if(zero_bytes_at_end == 1):
+				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (<low nibble of high + high nibble of low> 0E 5X E3):\n')
+			elif(zero_bytes_at_end == 2):
+				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (high 0C 5X E3):\n')
+        
+			for address in cmp_explicit_array:
+				f.write(str(hex(address)) + '\n')
+			
+			#regular cmp function (one byte) or sub followed by subs (two bytes)
+			if(high_byte == 0):
+				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (low XX 5X E3):\n')
+			else:
+				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (high XX 4X E2 low XX 5X):\n')
+		
+			for address in two_subtractions_array:
+				f.write(str(hex(address)) + '\n')
+			
+	return(explicit_address_array, cmp_explicit_array, two_subtractions_array)
+
+
+def main():
+	search_binary_file_two_bytes()
+
+if __name__ == '__main__':
+	main()
