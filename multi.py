@@ -16,17 +16,29 @@ def multisearch():
 	
 	target_directory = askdirectory(title = 'What directory do you want to search?')
 	
-
-	mode = int(input('Select mode:\n0 = Create a seperate text file for every file searched\n1 = Create 1 text file for each of the 3 ways the value might be found\n2 = Create 1 text file, but only look for the (much rarer) explicit assembly checks for equality (will only check .bin and .cro files):\n'))
-
-	if(not mode in {0, 1, 2}):
+	while True:
+		mode = int(input('Select mode:\n0 = Create a seperate text file for every file searched: \n1 = Create 1 text file: \n2 = Create 1 text file, and only look for the (much rarer) explicit assembly checks for equality: \n'))
+		if(mode in {0, 1, 2}):
+			break
 		print('Error, mode was not 0, 1, or 2, it was', mode)
-		return
+		
+	while True:
+		file_mask = int(input('Select files to search:\n0 = Everything: \n1 = Everything but GARC files: \n2 = Just .bin and .cro files: \n'))
+		if(file_mask in {0,1,2}):
+			break
+		print('Error, search option was not 0, 1, or 2, it was', file_mask)
 	
-	
-	match mode:
+	match file_mask:
 		case 0:
 			result = list(Path(target_directory).rglob("*"))
+		case 1:
+			result = list(Path(target_directory).rglob("*.*"))
+		case 2:
+			result = [*list(Path(target_directory).rglob("*.bin")), *list(Path(target_directory).rglob("*.cro"))]
+
+
+	match mode:
+		case 0:
 			target_directory = askdirectory(title = 'What directory do you want to save the results in?')
 			for x in result:
 				if(os.path.isfile(x)):
@@ -38,7 +50,6 @@ def multisearch():
 			cmp_explicit_array = []
 			two_subtractions_array = []
 			
-			result = list(Path(target_directory).rglob("*"))
 			for x in result:
 				if(os.path.isfile(x)):
 					temp_1, temp_2, temp_3 = search_binary_file_two_bytes(target_value, x, '', mode)
@@ -48,7 +59,6 @@ def multisearch():
 		case 2:
 			cmp_explicit_array = []
 			two_subtractions_array = []
-			result = [*list(Path(target_directory).rglob("*.bin")), *list(Path(target_directory).rglob("*.cro"))]
 			for x in result:
 				if(os.path.isfile(x)):
 					print('Now searching: ', x)
@@ -78,7 +88,7 @@ def multisearch():
 				f.write(str(hex(address)) + '\n')
 		
 		#bitshifted cmp function
-			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (<low nibble of high + high nibble of low> 0E 5X E3) or (high 0C 5X E3):\n')
+		f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (<low nibble of high + high nibble of low> 0E 5X E3) or (high 0C 5X E3):\n')
         
 		for address in cmp_explicit_array:
 			f.write(str(hex(address)) + '\n')
