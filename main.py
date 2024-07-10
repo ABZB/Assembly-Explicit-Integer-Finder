@@ -7,9 +7,9 @@ def check_two_bytes(offset_0, offset_2, offset_3, offset_4, offset_6, offset_7, 
 
 	return(offset_0 == high_byte and offset_2 >> 4 == 4 and offset_3 == 0xE2 and offset_4 == low_byte and offset_6 >> 4 == 5 and offset_7 == 0xE2)
 
-def check_one_byte(offset_0, offset_2, offset_3, low_byte):
+def check_one_byte(offset_0, offset_1, offset_2, offset_3, low_byte):
 	#<low_byte>, <unused>, <5 | register>, <EE3>
-	return(offset_0 == low_byte and offset_2 >> 4 == 5 and offset_3 == 0xE3)
+	return(offset_0 == low_byte and (offset_1 & 0x0F) == 0 and (offset_2 >> 4) == 5 and offset_3 == 0xE3)
 
 #bitshifted cmp
 def check_two_byte_cmp(offset_0, offset_1, offset_2, offset_3, half_nibble_shift, bitshifted_value):
@@ -138,7 +138,7 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 				break
 
 			try:
-				if(check_one_byte(search_array[offset + 0], search_array[offset + 2], search_array[offset + 3], low_byte)):
+				if(check_one_byte(search_array[offset + 0], search_array[offset + 1], search_array[offset + 2], search_array[offset + 3], low_byte)):
 					two_subtractions_array.append(offset)
 				#check to see if this matches as a regular little-endian integer
 				elif(search_array[offset] == low_byte):
