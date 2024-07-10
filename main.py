@@ -71,7 +71,7 @@ def check_bitshiftability(target_value, high_byte, low_byte):
 		bitshifted_value = 0
 		half_nibble_shift = 0
 		
-	print(bitshifted_value, hex(bitshifted_value))
+	#print(bitshifted_value, hex(bitshifted_value))
 	
 
 	return(bitshifted_value, half_nibble_shift)

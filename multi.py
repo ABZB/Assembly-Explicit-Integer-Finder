@@ -4,7 +4,7 @@ from pathlib import Path
 from glob import *
 
 def multisearch():
-	target_value = input('What is the base-10 value you are searching for?\n(Enter X to exit)')
+	target_value = input('What is the base-10 value you are searching for?\n')
 	
 	try:
 		target_value = int(target_value)
@@ -17,7 +17,7 @@ def multisearch():
 	low_byte = target_value % 256
 	high_byte = target_value >> 8
 
-	target_directory = askdirectory(title = 'What directory do you want to search?')
+	target_directory = askdirectory(title = '\nWhat directory do you want to search?')
 	
 	while True:
 		mode = int(input('Select mode:\n0 = Create a seperate text file for every file searched: \n1 = Create 1 text file: \n2 = Create 1 text file, and only look for the (much rarer) explicit assembly checks for equality: \n'))
