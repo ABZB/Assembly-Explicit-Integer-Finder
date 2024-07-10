@@ -126,6 +126,11 @@ def multisearch():
 					f.write(str(hex(address)) + '\n')
 				except:
 					f.write(str(address) + '\n')
+					
+		if(two_subtractions_array == cmp_explicit_array == explicit_address_array == []):
+			f.write('No results found')
+			print('No results found\n')
+	print('\n\n')
 	return(True)
 
 def main_loop():
