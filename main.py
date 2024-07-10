@@ -12,12 +12,50 @@ def check_one_byte(offset_0, offset_2, offset_3, low_byte):
 	return(offset_0 == low_byte and offset_2 >> 4 == 5 and offset_3 == 0xE3)
 
 #bitshifted cmp
-def check_two_byte_cmp(offset_0, offset_1, offset_2, offset_3, zero_bytes_at_end, bitshifted_value):
+def check_two_byte_cmp(offset_0, offset_1, offset_2, offset_3, half_nibble_shift, bitshifted_value):
 
-	if(zero_bytes_at_end == 1):
-		return(offset_0 == bitshifted_value and offset_1 == 0x0E and (offset_2 >> 4) == 5 and offset_3 == 0xE3)
+	return(offset_0 == bitshifted_value and offset_1 == (16 - half_nibble_shift) and (offset_2 >> 4) == 5 and offset_3 == 0xE3)
+
+#returns the number of 0 bits at start and end of byte
+def zero_bits_at_ends_of_byte(input_value: int):
+	
+	if(0 <= input_value <= 255):
+		temp = bin(input_value)
 	else:
-		return(offset_0 == bitshifted_value and offset_1 == 0x0C and (offset_2 >> 4) == 5 and offset_3 == 0xE3)
+		print('Error, input was not a byte, it was', input_value)
+		return
+	
+	start_flag = True
+	
+	low_zero_count = 0
+	high_zero_count = 0
+
+	#bin() has 0b at start of string
+	adjusted_length = len(temp) - 2
+
+	for x in range(adjusted_length):
+		
+		#move from least to greatest bit
+		z = temp[-1 - x]
+		
+		if(start_flag):
+			if(z == 0):
+				low_zero_count += 1
+			else:
+				start_flag = False
+		else:
+			if(z == 0):
+				high_zero_count += 1
+			else:
+				high_zero_count = 0
+				
+	#if higher bits are not present, we have that many extra bits on the high side
+	if(adjusted_length < 8):
+		high_zero_count += 8 - (adjusted_length)
+
+	return(high_zero_count, low_zero_count)
+	
+				
 
 def print_percent_done(file_length, position):
 	print(position/file_length)
@@ -49,24 +87,24 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 	#print(low_byte, high_byte)
 	
 	bitshifted_value = 0
-	zero_bytes_at_end = 0
+	half_nibble_shift = 0
 	cmp_explicit_array = []
 	
 
+
     #if we are dealing with a two-byte target that only has two non-zero bytes, and they are contiguous (e.g. 0x0BC0 or 0xAB00) we can also see a single-line cmp function that uses a bitshift
 	if(high_byte != 0):
-		#final two bytes are 0
-		if(low_byte == 0):
-			cmp_explicit_array = []
-			zero_bytes_at_end = 2
-			#in this case, the non-zero values are exactly the high byte
-			bitshifted_value = high_byte
-			
-		elif(low_byte % 16 == 0 and high_byte >> 4 == 0):
-			cmp_explicit_array = []
-			zero_bytes_at_end = 1
-			#we have 0x0B CO, need 0xBC, so bitshift the high byte up by 4 (since top 4 bits are empty), add that to low byte shifted down by 4 (since bottom 4 bits are empty)
-			bitshifted_value = (high_byte << 4) + (low_byte >> 4)
+		#count the number of 0 bits at the start and end. We have 16 bits total. If we have an even number of 0 bits on either side, and the total number of end-zero bits is at least 8, we can bitshift
+		high_bits_of_high, low_bits_of_high = zero_bits_at_ends_of_byte(high_byte)
+		high_bits_of_low, low_bits_of_low = zero_bits_at_ends_of_byte(low_byte)
+
+		#see if we can shift rand end up with 1 byte - so the number of zero low bits of the low byte plus high bits of high is at least a byte's worth
+		#so if we have k free bits on the right, we create instruction by moving k//2 half-nibbles to the right
+		#to recover the value, need to shift k//2 to the left, which is 16 - k//2 to the right, because it circles around modulo 16
+		#so the instruction second byte will be 0<16 - half_nibble_shift>
+		if(low_bits_of_low + high_bits_of_high >= 8):
+			half_nibble_shift = low_bits_of_low//2
+			bitshifted_value = target_value >> half_nibble_shift
 
 	with open(source_file, "r+b") as f:
 		f.seek(0, os.SEEK_END)
@@ -122,8 +160,8 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 					explicit_address_array.append(offset)
                 
                 #checks for cmp being used for two bytes at once
-				elif(zero_bytes_at_end != 0):
-					if(check_two_byte_cmp(search_array[offset + 0], search_array[offset + 1], search_array[offset + 2], search_array[offset + 3], zero_bytes_at_end, bitshifted_value)):
+				elif(half_nibble_shift != 0):
+					if(check_two_byte_cmp(search_array[offset + 0], search_array[offset + 1], search_array[offset + 2], search_array[offset + 3], half_nibble_shift, bitshifted_value)):
 						cmp_explicit_array.append(offset)
 			except:
 				print('Error encountered at ', offset, ' 2-byte mode')
@@ -150,10 +188,8 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 				f.write(str(hex(address)) + '\n')
 		
 			#bitshifted cmp function
-			if(zero_bytes_at_end == 1):
-				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (<low nibble of high + high nibble of low> 0E 5X E3):\n')
-			elif(zero_bytes_at_end == 2):
-				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (high 0C 5X E3):\n')
+			if(half_nibble_shift != 0):
+				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (', bitshifted_value, ' 0' + hex(16 - half_nibble_shift)[-1] + ' 5X E3):\n')
         
 			for address in cmp_explicit_array:
 				f.write(str(hex(address)) + '\n')
