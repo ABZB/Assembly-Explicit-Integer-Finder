@@ -32,19 +32,19 @@ def zero_bits_at_ends_of_byte(input_value: int):
 
 	#bin() has 0b at start of string
 	adjusted_length = len(temp) - 2
-
+	
 	for x in range(adjusted_length):
 		
 		#move from least to greatest bit
 		z = temp[-1 - x]
 		
 		if(start_flag):
-			if(z == 0):
+			if(z in {0,'0'}):
 				low_zero_count += 1
 			else:
 				start_flag = False
 		else:
-			if(z == 0):
+			if(z in {0,'0'}):
 				high_zero_count += 1
 			else:
 				high_zero_count = 0
@@ -55,7 +55,26 @@ def zero_bits_at_ends_of_byte(input_value: int):
 
 	return(high_zero_count, low_zero_count)
 	
-				
+def check_bitshiftability(target_value, high_byte, low_byte):
+	#count the number of 0 bits at the start and end. We have 16 bits total. If we have an even number of 0 bits on either side, and the total number of end-zero bits is at least 8, we can bitshift
+	high_bits_of_high, low_bits_of_high = zero_bits_at_ends_of_byte(high_byte)
+	high_bits_of_low, low_bits_of_low = zero_bits_at_ends_of_byte(low_byte)
+
+	#see if we can shift rand end up with 1 byte - so the number of zero low bits of the low byte plus high bits of high is at least a byte's worth
+	#so if we have k free bits on the right, we create instruction by moving k//2 half-nibbles to the right
+	#to recover the value, need to shift k//2 to the left, which is 16 - k//2 to the right, because it circles around modulo 16
+	#so the instruction second byte will be 0<16 - half_nibble_shift>
+	if(low_bits_of_low + high_bits_of_high >= 8):
+		half_nibble_shift = low_bits_of_low//2
+		bitshifted_value = target_value >> (half_nibble_shift*2)
+	else:
+		bitshifted_value = 0
+		half_nibble_shift = 0
+		
+	print(bitshifted_value, hex(bitshifted_value))
+	
+
+	return(bitshifted_value, half_nibble_shift)
 
 def print_percent_done(file_length, position):
 	print(position/file_length)
@@ -94,17 +113,7 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 
     #if we are dealing with a two-byte target that only has two non-zero bytes, and they are contiguous (e.g. 0x0BC0 or 0xAB00) we can also see a single-line cmp function that uses a bitshift
 	if(high_byte != 0):
-		#count the number of 0 bits at the start and end. We have 16 bits total. If we have an even number of 0 bits on either side, and the total number of end-zero bits is at least 8, we can bitshift
-		high_bits_of_high, low_bits_of_high = zero_bits_at_ends_of_byte(high_byte)
-		high_bits_of_low, low_bits_of_low = zero_bits_at_ends_of_byte(low_byte)
-
-		#see if we can shift rand end up with 1 byte - so the number of zero low bits of the low byte plus high bits of high is at least a byte's worth
-		#so if we have k free bits on the right, we create instruction by moving k//2 half-nibbles to the right
-		#to recover the value, need to shift k//2 to the left, which is 16 - k//2 to the right, because it circles around modulo 16
-		#so the instruction second byte will be 0<16 - half_nibble_shift>
-		if(low_bits_of_low + high_bits_of_high >= 8):
-			half_nibble_shift = low_bits_of_low//2
-			bitshifted_value = target_value >> half_nibble_shift
+		bitshifted_value, half_nibble_shift = check_bitshiftability(target_value, high_byte, low_byte)
 
 	with open(source_file, "r+b") as f:
 		f.seek(0, os.SEEK_END)
@@ -202,7 +211,7 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 		
 			for address in two_subtractions_array:
 				f.write(str(hex(address)) + '\n')
-			
+	
 	return(explicit_address_array, cmp_explicit_array, two_subtractions_array)
 
 

@@ -4,13 +4,15 @@ from pathlib import Path
 from glob import *
 
 def multisearch():
-	target_value = input('What is the base-10 value you are searching for? ')
+	target_value = input('What is the base-10 value you are searching for?\n(Enter X to exit)')
 	
 	try:
 		target_value = int(target_value)
 	except:
-		print(target_value, 'is not an integer, it is ', type(target_value))
-		return
+		if(target_value in {'X', 'x'}):
+			return(False)
+		print(target_value, 'is not an integer, it is ', type(target_value), '\n')
+		return(True)
 	
 	low_byte = target_value % 256
 	high_byte = target_value >> 8
@@ -24,11 +26,13 @@ def multisearch():
 		print('Error, mode was not 0, 1, or 2, it was', mode)
 		
 	while True:
-		file_mask = int(input('Select files to search:\n0 = Everything: \n1 = Everything but GARC files: \n2 = Just .bin and .cro files: \n'))
+		file_mask = int(input('\nSelect files to search:\n0 = Everything: \n1 = Everything but GARC files: \n2 = Just .bin and .cro files: \n'))
 		if(file_mask in {0,1,2}):
 			break
 		print('Error, search option was not 0, 1, or 2, it was', file_mask)
 	
+	print('\n')
+
 	match file_mask:
 		case 0:
 			result = list(Path(target_directory).rglob("*"))
@@ -36,7 +40,10 @@ def multisearch():
 			result = list(Path(target_directory).rglob("*.*"))
 		case 2:
 			result = [*list(Path(target_directory).rglob("*.bin")), *list(Path(target_directory).rglob("*.cro"))]
-
+			
+	explicit_address_array = []
+	cmp_explicit_array = []
+	two_subtractions_array = []
 
 	match mode:
 		case 0:
@@ -45,11 +52,8 @@ def multisearch():
 				if(os.path.isfile(x)):
 					output_file_name = x.replace('/', '_')
 					search_binary_file_two_bytes(target_value, x, output_file_name)
-			return
+			return(True)
 		case 1:
-			explicit_address_array = []
-			cmp_explicit_array = []
-			two_subtractions_array = []
 			
 			for x in result:
 				if(os.path.isfile(x)):
@@ -64,9 +68,6 @@ def multisearch():
 					if(temp_3 != []):
 						two_subtractions_array = [*two_subtractions_array, '\n' + x + '\n', *temp_3]
 		case 2:
-			explicit_address_array = []
-			cmp_explicit_array = []
-			two_subtractions_array = []
 			for x in result:
 				if(os.path.isfile(x)):
 					print('Now searching: ', x)
@@ -85,6 +86,8 @@ def multisearch():
 		output_value_display = hex(low_byte) + ' ' + hex(high_byte)
 	
 	
+	
+
 	output_file_path = asksaveasfilename(title = 'Select text file to save output as', defaultextension = '.txt')
 	
 	with open(output_file_path, "w") as f:
@@ -99,24 +102,37 @@ def multisearch():
 					f.write(str(address) + '\n')
 		
 		#bitshifted cmp function
-		f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (<low nibble of high + high nibble of low> 0E 5X E3) or (high 0C 5X E3):\n')
+		if(high_byte != 0):
+			bitshifted_value, half_nibble_shift = check_bitshiftability(target_value, high_byte, low_byte)
+			(target_value, high_byte, low_byte)
+		if(cmp_explicit_array != []):
+			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (' +  hex(bitshifted_value)[2:4] + ' 0' + hex(16 - half_nibble_shift)[-1] + ' 5X E3):\n')
         
-		for address in cmp_explicit_array:
-			try:
-				f.write(str(hex(address)) + '\n')
-			except:
-				f.write(str(address) + '\n')
+			for address in cmp_explicit_array:
+				try:
+					f.write(str(hex(address)) + '\n')
+				except:
+					f.write(str(address) + '\n')
 			
 		#regular cmp function (one byte) or sub followed by subs (two bytes)
-		if(high_byte == 0):
-			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (low XX 5X E3):\n')
-		else:
-			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (high XX 4X E2 low XX 5X):\n')
+		if(two_subtractions_array != []):
+			if(high_byte == 0):
+				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (' + hex(low_byte)[2:4] + ' XX 5X E3):\n')
+			else:
+				f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display + ' was found being checked for equality (' + hex(high_byte)[2:4] + ' XX 4X E2 ' + hex(low_byte)[2:4] + ' XX 5X):\n')
 		
-		for address in two_subtractions_array:
-			try:
-				f.write(str(hex(address)) + '\n')
-			except:
-				f.write(str(address) + '\n')
-			
-multisearch()
+			for address in two_subtractions_array:
+				try:
+					f.write(str(hex(address)) + '\n')
+				except:
+					f.write(str(address) + '\n')
+	return(True)
+
+def main_loop():
+	while True:
+		continue_bool = multisearch()
+		if(not(continue_bool)):
+			return
+		
+
+main_loop()
