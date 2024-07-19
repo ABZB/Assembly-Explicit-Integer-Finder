@@ -115,16 +115,18 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
     #if we are dealing with a two-byte target that only has two non-zero bytes, and they are contiguous (e.g. 0x0BC0 or 0xAB00) we can also see a single-line cmp function that uses a bitshift
 	if(high_byte != 0):
 		bitshifted_value, half_nibble_shift = check_bitshiftability(target_value, high_byte, low_byte)
-
-	with open(source_file, "r+b") as f:
-		f.seek(0, os.SEEK_END)
-		file_end = f.tell()
-		f.seek(0, 0)
-		block = f.read(file_end)
+	try:
+		with open(source_file, "r+b") as f:
+			f.seek(0, os.SEEK_END)
+			file_end = f.tell()
+			f.seek(0, 0)
+			block = f.read(file_end)
 		
-		for ch in block:
-			search_array.append(ch)
-        
+			for ch in block:
+				search_array.append(ch)
+	except Exception as e:
+		print('Encountered following error when opening file ', source_file, '\n', e)
+		return([], [], [], [])
     
     
 	file_length = len(search_array)
