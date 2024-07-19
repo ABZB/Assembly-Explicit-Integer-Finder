@@ -96,7 +96,8 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 		return
 	
 	
-	explicit_address_array = []
+	explicit_address_array_table = []
+	explicit_address_array_four_byte_loader_table = []
 	two_subtractions_array = []
 	
 	#divide into the low and high bytes
@@ -140,11 +141,12 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 			try:
 				if(check_one_byte(search_array[offset + 0], search_array[offset + 1], search_array[offset + 2], search_array[offset + 3], low_byte)):
 					two_subtractions_array.append(offset)
-				#check to see if this matches as a regular little-endian integer
-				elif(search_array[offset] == low_byte):
-					explicit_address_array.append(offset)
-				elif(search_array[offset] == low_byte and search_array[offset + 1] == high_byte):
-					explicit_address_array.append(offset)
+				#look for the data stored in four bytes called by ldr
+				elif(search_array[offset] == low_byte and search_array[offset + 1] == search_array[offset + 2] == search_array[offset + 3] == 0):
+					explicit_address_array_four_byte_loader_table.append(offset)
+				#check to see if this matches as a regular little-endian integer (assume two bytes, because that's how the tables are formatted)
+				elif(search_array[offset] == low_byte and search_array[offset + 1] == 0x0):
+					explicit_address_array_table.append(offset)
 			except:
 				print('Error encountered at ', offset, ' 1-byte mode')
 				break
@@ -164,10 +166,12 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
                 #checks for sub followed by subs using the integer one byte at a time
 				if(check_two_bytes(search_array[offset + 0], search_array[offset + 2], search_array[offset + 3], search_array[offset + 4], search_array[offset + 6], search_array[offset + 7], high_byte, low_byte)):
 					two_subtractions_array.append(offset)
-                #checks for the integer written out in little-endian explicitly
-				elif(search_array[offset + 0] == low_byte and search_array[offset + 1] == high_byte):
-					explicit_address_array.append(offset)
-                
+				#look for the data stored in four bytes called by ldr
+				elif(search_array[offset] == low_byte and search_array[offset + 1] == high_byte and search_array[offset + 2] == search_array[offset + 3] == 0):
+					explicit_address_array_four_byte_loader_table.append(offset)
+				#check to see if this matches as a regular little-endian integer (assume two bytes, because that's how the tables are formatted)
+				elif(search_array[offset] == low_byte and search_array[offset + 1] == high_byte):
+					explicit_address_array_table.append(offset)
                 #checks for cmp being used for two bytes at once
 				elif(half_nibble_shift != 0):
 					if(check_two_byte_cmp(search_array[offset + 0], search_array[offset + 1], search_array[offset + 2], search_array[offset + 3], half_nibble_shift, bitshifted_value)):
@@ -184,16 +188,26 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 	
 		if(high_byte == 0):
 			output_value_display = hex(low_byte)
+			output_value_display_two_bytes = hex(low_byte) + ' 00'
+			output_value_display_four_bytes = hex(low_byte) + ' 00 00 00'
 		else:
 			output_value_display = hex(low_byte) + ' ' + hex(high_byte)
+			output_value_display_two_bytes = output_value_display
+			output_value_display_four_bytes = output_value_display + ' 00 00'
 	
 
 		with open(output_file_path, "w") as f:
 		
 			#explicitly written and loaded by functions
-			f.write('The following are the hexadecimal addresses where the value ' + output_value_display + ' was found (written explicitly in little-Endian, presumably loaded by functions pointing to that address):\n')
+			f.write('The following are the hexadecimal addresses where the value ' + output_value_display_two_bytes + ' was found (usually how it appears in a table):\n')
 		
-			for address in explicit_address_array:
+			for address in explicit_address_array_table:
+				f.write(str(hex(address)) + '\n')
+		
+			#explicitly written and loaded by functions
+			f.write('The following are the hexadecimal addresses where the value ' + output_value_display_four_bytes + ' was found (usually how it appears when called by a ldr function):\n')
+		
+			for address in explicit_address_array_four_byte_loader_table:
 				f.write(str(hex(address)) + '\n')
 		
 			#bitshifted cmp function
@@ -212,7 +226,7 @@ def search_binary_file_two_bytes(target_value = -1, source_file = '', output_fil
 			for address in two_subtractions_array:
 				f.write(str(hex(address)) + '\n')
 	
-	return(explicit_address_array, cmp_explicit_array, two_subtractions_array)
+	return(explicit_address_array_table, explicit_address_array_four_byte_loader_table, cmp_explicit_array, two_subtractions_array)
 
 
 def main():

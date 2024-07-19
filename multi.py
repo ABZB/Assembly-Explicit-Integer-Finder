@@ -42,6 +42,7 @@ def multisearch():
 			result = [*list(Path(target_directory).rglob("*.bin")), *list(Path(target_directory).rglob("*.cro"))]
 			
 	explicit_address_array = []
+	explicit_address_array_four_byte = []
 	cmp_explicit_array = []
 	two_subtractions_array = []
 
@@ -57,12 +58,14 @@ def multisearch():
 			
 			for x in result:
 				if(os.path.isfile(x)):
-					temp_1, temp_2, temp_3 = search_binary_file_two_bytes(target_value, x, '', mode)
+					temp_1, temp_4, temp_2, temp_3 = search_binary_file_two_bytes(target_value, x, '', mode)
 					
 					x = str(x)
 					
 					if(temp_1 != []):
 						explicit_address_array = [*explicit_address_array, '\n' + x + '\n', *temp_1]
+					if(temp_4 != []):
+						explicit_address_array_four_byte = [*explicit_address_array_four_byte, '\n' + x + '\n', *temp_4]
 					if(temp_2 != []):
 						cmp_explicit_array = [*cmp_explicit_array, '\n' + x + '\n', *temp_2]
 					if(temp_3 != []):
@@ -71,7 +74,7 @@ def multisearch():
 			for x in result:
 				if(os.path.isfile(x)):
 					print('Now searching: ', x)
-					temp_1, temp_2, temp_3 = search_binary_file_two_bytes(target_value, x, '', mode)
+					temp_1, temp_4, temp_2, temp_3 = search_binary_file_two_bytes(target_value, x, '', mode)
 					
 					x = str(x)
 
@@ -82,20 +85,30 @@ def multisearch():
 				
 	if(high_byte == 0):
 		output_value_display = hex(low_byte)
+		output_value_display_two_bytes = hex(low_byte) + ' 00'
+		output_value_display_four_bytes = hex(low_byte) + ' 00 00 00'
 	else:
 		output_value_display = hex(low_byte) + ' ' + hex(high_byte)
-	
-	
-	
+		output_value_display_two_bytes = output_value_display
+		output_value_display_four_bytes = output_value_display + ' 00 00'
 
 	output_file_path = asksaveasfilename(title = 'Select text file to save output as', defaultextension = '.txt')
 	
 	with open(output_file_path, "w") as f:
-		if(mode != 2):
+		if(mode != 2 and explicit_address_array != []):
 			#explicitly written and loaded by functions
-			f.write('The following are the hexadecimal addresses where the value ' + output_value_display + ' was found (written explicitly in little-Endian, presumably loaded by functions pointing to that address):\n')
+			f.write('The following are the hexadecimal addresses where the value ' + output_value_display_two_bytes + ' was found (usually how it appears in a table):\n')
 		
 			for address in explicit_address_array:
+				try:	
+					f.write(str(hex(address)) + '\n')
+				except:
+					f.write(str(address) + '\n')
+		if(mode != 2 and explicit_address_array_four_byte != []):
+			#explicitly written and loaded by functions
+			f.write('\nThe following are the hexadecimal addresses where the value ' + output_value_display_four_bytes + ' was found (usually how it appears when called by a ldr function):\n')
+		
+			for address in explicit_address_array_four_byte:
 				try:	
 					f.write(str(hex(address)) + '\n')
 				except:
